@@ -1,0 +1,19 @@
+RewriteEngine On
+
+# Allow API requests to pass through
+RewriteRule ^api/(.*)$ routes/api.php?action=$1 [QSA,L]
+
+# Redirect all requests to public folder if not a file or directory
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ public/$1 [L]
+
+# Set default page
+DirectoryIndex public/index.php
+
+# Disable directory listing
+Options -Indexes
+
+# Enable error reporting (disable in production)
+php_flag display_errors On
+php_value error_reporting E_ALL
