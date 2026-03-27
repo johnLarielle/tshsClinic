@@ -1,280 +1,347 @@
-// API endpoints - Admin version with full CRUD
-const API_URL = '../../routes/api.php';
+// API endpoints
+const API_URL          = '../../routes/api.php';
 const MEDICINE_API_URL = '../../routes/medicine_api.php';
+const SYMPTOMS_API_URL = '../../routes/symptoms_api.php';
 
-// DOM Elements
-const form = document.getElementById('patientForm');
-const tableBody = document.getElementById('patientTableBody');
-const messageDiv = document.getElementById('message');
-const formTitle = document.getElementById('formTitle');
-const submitBtn = document.getElementById('submitBtn');
-const cancelBtn = document.getElementById('cancelBtn');
-const editIdInput = document.getElementById('editId');
-const medicineSelect = document.getElementById('medicine');
-
-// Load patients and medicines on page load
+// ─── Init ───────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     loadPatients();
     loadMedicines();
-    // Set today's date as default
-    document.getElementById('date').valueAsDate = new Date();
+    loadSymptoms();
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeModal();
+    });
 });
 
-// Load medicines for dropdown
-async function loadMedicines() {
-    try {
-        const response = await fetch(`${MEDICINE_API_URL}?action=read`);
-        const result = await response.json();
+// ─── Modal helpers ──────────────────────────────────────────
+function openAddModal() {
+    resetForm();
+    document.getElementById('modalTitle').textContent = 'Add Patient Record';
+    document.getElementById('submitBtn').textContent  = 'Add Record';
+    document.getElementById('date').valueAsDate = new Date();
+    document.getElementById('recordModal').classList.add('open');
+}
 
-        if (result.success && result.data && result.data.length > 0) {
-            // Clear existing options except the first one
-            medicineSelect.innerHTML = '<option value="">Select Medicine</option>';
-            
-            // Add medicines to dropdown
-            result.data.forEach(medicine => {
-                const option = document.createElement('option');
-                option.value = medicine.medicine_name;
-                option.textContent = medicine.medicine_name;
-                option.dataset.stock = medicine.current_stock;
-                
-                // Disable if out of stock
-                if (parseInt(medicine.current_stock) === 0) {
-                    option.disabled = true;
-                    option.textContent += ' (Out of stock)';
-                    option.style.color = '#999';
-                }
-                // Red text if low stock (less than 10)
-                else if (parseInt(medicine.current_stock) < 10) {
-                    option.style.color = '#dc2626';
-                    option.style.fontWeight = 'bold';
-                }
-                
-                medicineSelect.appendChild(option);
-            });
-        } else {
-            medicineSelect.innerHTML = '<option value="">No medicines available</option>';
+function openEditModal() {
+    document.getElementById('modalTitle').textContent = 'Edit Patient Record';
+    document.getElementById('submitBtn').textContent  = 'Update Record';
+    document.getElementById('recordModal').classList.add('open');
+}
+
+function closeModal() {
+    document.getElementById('recordModal').classList.remove('open');
+    resetForm();
+}
+
+// Close when clicking outside the modal box
+function handleOverlayClick(e) {
+    if (e.target === document.getElementById('recordModal')) closeModal();
+}
+
+// ─── Load symptoms dropdown ──────────────────────────────────
+async function loadSymptoms() {
+    try {
+        const res    = await fetch(`${SYMPTOMS_API_URL}?action=read`);
+        const result = await res.json();
+        const select = document.getElementById('symptom_select');
+
+        if (!result.success || !result.data.length) {
+            select.innerHTML = '<option value="">No symptoms defined</option>';
+            return;
         }
-    } catch (error) {
-        console.error('Error loading medicines:', error);
-        medicineSelect.innerHTML = '<option value="">Error loading medicines</option>';
+
+        select.innerHTML = '<option value="">— Select a symptom —</option>';
+
+        // Render grouped <optgroup> elements
+        const grouped = result.grouped || {};
+        Object.keys(grouped).sort().forEach(cat => {
+            const group = document.createElement('optgroup');
+            group.label = cat;
+            grouped[cat].forEach(s => {
+                const opt = document.createElement('option');
+                opt.value       = s.symptom_name;
+                opt.textContent = s.symptom_name;
+                group.appendChild(opt);
+            });
+            select.appendChild(group);
+        });
+
+        // "Other" option at the bottom
+        const other = document.createElement('option');
+        other.value       = '__other__';
+        other.textContent = '✏️  Other (type manually)';
+        select.appendChild(other);
+
+    } catch (err) {
+        console.error('Error loading symptoms:', err);
+        document.getElementById('symptom_select').innerHTML = '<option value="">Error loading symptoms</option>';
     }
 }
 
-// Show message
-function showMessage(message, type) {
-    messageDiv.textContent = message;
-    messageDiv.className = `message ${type}`;
-    messageDiv.style.display = 'block';
-    
-    setTimeout(() => {
-        messageDiv.style.display = 'none';
-    }, 5000);
+// Show/hide the free-text field based on dropdown selection
+function handleSymptomChange(sel) {
+    const otherGroup  = document.getElementById('otherReasonGroup');
+    const reasonField = document.getElementById('reason');
+    const hiddenField = document.getElementById('reason_hidden');
+
+    if (sel.value === '__other__') {
+        otherGroup.style.display  = '';
+        reasonField.required      = true;
+        reasonField.value         = '';
+        hiddenField.value         = '';
+    } else {
+        otherGroup.style.display  = 'none';
+        reasonField.required      = false;
+        hiddenField.value         = sel.value;  // store selected symptom name
+    }
 }
 
-// Load all patients
-async function loadPatients() {
+// ─── Load medicines for dropdown ────────────────────────────
+async function loadMedicines() {
     try {
-        const response = await fetch(`${API_URL}?action=read`);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        const res    = await fetch(`${MEDICINE_API_URL}?action=read`);
+        const result = await res.json();
+        const select = document.getElementById('medicine');
+
+        if (result.success && result.data && result.data.length > 0) {
+            select.innerHTML = '<option value="">Select medicine…</option>';
+            result.data.forEach(med => {
+                const opt   = document.createElement('option');
+                opt.value   = med.medicine_name;
+                opt.dataset.stock = med.current_stock;
+
+                if (parseInt(med.current_stock) === 0) {
+                    opt.disabled     = true;
+                    opt.textContent  = `${med.medicine_name} (Out of stock)`;
+                    opt.style.color  = '#999';
+                } else {
+                    opt.textContent = med.medicine_name;
+                    if (parseInt(med.current_stock) < 10) {
+                        opt.style.color      = '#dc2626';
+                        opt.style.fontWeight = 'bold';
+                    }
+                }
+                select.appendChild(opt);
+            });
+        } else {
+            select.innerHTML = '<option value="">No medicines available</option>';
         }
-        
-        const result = await response.json();
-        console.log('API Response:', result);
+    } catch (err) {
+        console.error('Error loading medicines:', err);
+        document.getElementById('medicine').innerHTML = '<option value="">Error loading medicines</option>';
+    }
+}
+
+// ─── Load all patient records ───────────────────────────────
+async function loadPatients() {
+    const tbody = document.getElementById('patientTableBody');
+    tbody.innerHTML = '<tr><td colspan="9" class="loading">Loading records…</td></tr>';
+
+    try {
+        const res    = await fetch(`${API_URL}?action=read`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const result = await res.json();
 
         if (result.success && result.data && result.data.length > 0) {
             displayPatients(result.data);
-        } else if (result.success && (!result.data || result.data.length === 0)) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="9" class="empty-state">
-                        <div>No records found. Add your first patient record above!</div>
-                    </td>
-                </tr>
-            `;
+            const cnt = document.getElementById('recordCount');
+            if (cnt) cnt.textContent = `${result.data.length} record${result.data.length !== 1 ? 's' : ''}`;
+
+        } else if (result.success) {
+            tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><i class=\'bx bx-folder-open\'></i><p>No records found. Click "Add Record" to get started.</p></div></td></tr>';
         } else {
-            console.error('API Error:', result.error);
             showMessage(result.error || 'Failed to load records', 'error');
         }
-    } catch (error) {
-        console.error('Error loading patients:', error);
-        showMessage('Failed to load patient records: ' + error.message, 'error');
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="9" class="empty-state">
-                    <div>Error loading records. Check console for details.</div>
-                </td>
-            </tr>
-        `;
+    } catch (err) {
+        console.error('Error loading patients:', err);
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Error loading records. Check console for details.</td></tr>';
     }
 }
 
-// Display patients in table - ADMIN VERSION with edit/delete buttons
+// ─── Display records in table ───────────────────────────────
 function displayPatients(patients) {
-    console.log('Displaying patients:', patients);
-    tableBody.innerHTML = '';
-    
-    try {
-        patients.forEach((patient) => {
+    const tbody = document.getElementById('patientTableBody');
+    tbody.innerHTML = '';
+
+        patients.forEach(p => {
             const row = document.createElement('tr');
+            row.setAttribute('data-search',
+                [p.patient_name, p.patient_type, p.medicine_name, p.reason, p.contact_no]
+                    .join(' ').toLowerCase());
+
+            const type    = p.patient_type || 'N/A';
+            const badgeCls = ['Student','Faculty','Staff','Visitor'].includes(type) ? `badge-${type}` : 'badge-gray';
+
             row.innerHTML = `
-                <td>${patient.record_id || 'N/A'}</td>
-                <td>${patient.patient_name || 'N/A'}</td>
-                <td>${patient.patient_type || 'N/A'}</td>
-                <td>${patient.contact_no || 'N/A'}</td>
-                <td>${patient.medicine_name || 'N/A'}</td>
-                <td>${patient.quantity || 0}</td>
-                <td>${patient.reason || 'N/A'}</td>
-                <td>${formatDate(patient.date_given)}</td>
+                <td style="color:var(--txt-3);font-size:0.8em;">${escapeHtml(p.record_id || 'N/A')}</td>
+                <td><strong>${escapeHtml(p.patient_name || 'N/A')}</strong></td>
+                <td><span class="badge ${badgeCls}">${escapeHtml(type)}</span></td>
+                <td>${escapeHtml(p.contact_no || 'N/A')}</td>
+                <td>${escapeHtml(p.medicine_name || 'N/A')}</td>
+                <td><strong>${escapeHtml(p.quantity ?? 0)}</strong></td>
+                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(p.reason || '')}">${escapeHtml(p.reason || 'N/A')}</td>
+                <td style="white-space:nowrap;">${formatDate(p.date_given)}</td>
                 <td>
-                    <div class="action-buttons">
-                        <button class="btn-edit" onclick="editPatient(${patient.record_id})">Edit</button>
-                        <button class="btn-delete" onclick="deletePatient(${patient.record_id})">Delete</button>
+                    <div class="action-btns">
+                        <button class="btn-tbl btn-tbl-edit"   title="Edit"   onclick="editPatient(${p.record_id})"><i class='bx bx-edit'></i></button>
+                        <button class="btn-tbl btn-tbl-delete" title="Delete" onclick="deletePatient(${p.record_id})"><i class='bx bx-trash'></i></button>
                     </div>
-                </td>
-            `;
-            tableBody.appendChild(row);
+                </td>`;
+            tbody.appendChild(row);
         });
-    } catch (error) {
-        console.error('Error displaying patients:', error);
-        showMessage('Error displaying records: ' + error.message, 'error');
-    }
 }
 
-// Format date
-function formatDate(dateString) {
-    if (!dateString) return 'N/A';
-    try {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) return 'Invalid Date';
-        return date.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: '2-digit', 
-            day: '2-digit' 
-        });
-    } catch (e) {
-        return 'N/A';
-    }
+// ─── Live search / filter ───────────────────────────────────
+function filterTable() {
+    const q     = document.getElementById('searchInput').value.toLowerCase();
+    const rows  = document.querySelectorAll('#patientTableBody tr[data-search]');
+    rows.forEach(row => {
+        row.style.display = row.dataset.search.includes(q) ? '' : 'none';
+    });
 }
 
-// Handle form submission
-form.addEventListener('submit', async (e) => {
+// ─── Form submission (create + update) ─────────────────────
+document.getElementById('patientForm').addEventListener('submit', async e => {
     e.preventDefault();
 
-    const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
+    // If "Other" was chosen, copy the typed text into the hidden field
+    const symSel = document.getElementById('symptom_select');
+    if (symSel.value === '__other__') {
+        document.getElementById('reason_hidden').value = document.getElementById('reason').value.trim();
+    }
 
-    const isEdit = editIdInput.value !== '';
-    const action = isEdit ? 'update' : 'create';
+    const data    = Object.fromEntries(new FormData(e.target).entries());
+    const isEdit  = data.id !== '';
+    const action  = isEdit ? 'update' : 'create';
+
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled    = true;
+    submitBtn.textContent = isEdit ? 'Saving…' : 'Adding…';
 
     try {
-        const response = await fetch(`${API_URL}?action=${action}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data)
+        const res    = await fetch(`${API_URL}?action=${action}`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify(data),
         });
-
-        const result = await response.json();
+        const result = await res.json();
 
         if (result.success) {
             showMessage(result.message, 'success');
-            form.reset();
-            resetForm();
+            closeModal();
             loadPatients();
-            document.getElementById('date').valueAsDate = new Date();
+            loadMedicines();
         } else {
             showMessage(result.error || 'Operation failed', 'error');
         }
-    } catch (error) {
-        console.error('Error:', error);
+    } catch (err) {
+        console.error('Error:', err);
         showMessage('An error occurred. Please try again.', 'error');
+    } finally {
+        submitBtn.disabled    = false;
+        submitBtn.textContent = isEdit ? 'Update Record' : 'Add Record';
     }
 });
 
-// Edit patient - ADMIN ONLY
+// ─── Edit ───────────────────────────────────────────────────
 async function editPatient(id) {
     try {
-        const response = await fetch(`${API_URL}?action=read_one&id=${id}`);
-        const result = await response.json();
+        const res    = await fetch(`${API_URL}?action=read_one&id=${id}`);
+        const result = await res.json();
 
-        if (result.success) {
-            const patient = result.data;
-            
-            // Populate form
-            editIdInput.value = patient.record_id;
-            document.getElementById('patient_id').value = patient.patient_id;
-            document.getElementById('name').value = patient.patient_name;
-            document.getElementById('patient_type').value = patient.patient_type;
-            document.getElementById('contact_no').value = patient.contact_no;
-            
-            // Select the medicine in dropdown
-            const medicineSelect = document.getElementById('medicine');
-            const medicineOption = Array.from(medicineSelect.options).find(
-                option => option.value === patient.medicine_name
-            );
-            if (medicineOption) {
-                medicineSelect.value = patient.medicine_name;
-            }
-            
-            document.getElementById('quantity').value = patient.quantity;
-            document.getElementById('reason').value = patient.reason;
-            document.getElementById('date').value = patient.date_given.split(' ')[0];
+        if (!result.success) { showMessage('Failed to load record', 'error'); return; }
 
-            // Update UI
-            formTitle.textContent = 'Edit Patient Record';
-            submitBtn.textContent = 'Update Record';
-            cancelBtn.style.display = 'inline-block';
+        const p = result.data;
 
-            // Scroll to form
-            form.scrollIntoView({ behavior: 'smooth' });
+        document.getElementById('editId').value      = p.record_id;
+        document.getElementById('patient_id').value  = p.patient_id;
+        document.getElementById('name').value        = p.patient_name;
+        document.getElementById('patient_type').value= p.patient_type;
+        document.getElementById('contact_no').value  = p.contact_no;
+        document.getElementById('quantity').value    = p.quantity;
+        document.getElementById('reason').value      = p.reason;
+        document.getElementById('date').value        = (p.date_given || '').split(' ')[0];
+
+        // Select medicine option
+        const medSelect = document.getElementById('medicine');
+        const medMatch  = Array.from(medSelect.options).find(o => o.value === p.medicine_name);
+        if (medMatch) medSelect.value = p.medicine_name;
+
+        // Select symptom — try to find in dropdown; fall back to "Other"
+        const symSelect    = document.getElementById('symptom_select');
+        const reasonHidden = document.getElementById('reason_hidden');
+        const reasonField  = document.getElementById('reason');
+        const otherGroup   = document.getElementById('otherReasonGroup');
+        const symMatch     = Array.from(symSelect.options).find(o => o.value === p.reason);
+
+        if (symMatch) {
+            symSelect.value        = p.reason;
+            reasonHidden.value     = p.reason;
+            otherGroup.style.display = 'none';
+            reasonField.required   = false;
         } else {
-            showMessage('Failed to load patient record', 'error');
+            symSelect.value        = '__other__';
+            otherGroup.style.display = '';
+            reasonField.required   = true;
+            reasonField.value      = p.reason;
+            reasonHidden.value     = p.reason;
         }
-    } catch (error) {
-        console.error('Error:', error);
-        showMessage('Failed to load patient record', 'error');
+
+        openEditModal();
+    } catch (err) {
+        console.error('Error:', err);
+        showMessage('Failed to load record', 'error');
     }
 }
 
-// Delete patient - ADMIN ONLY
+// ─── Delete ─────────────────────────────────────────────────
 async function deletePatient(id) {
-    if (!confirm('Are you sure you want to delete this patient record?')) {
-        return;
-    }
+    if (!confirm('Delete this patient record? The medicine stock will be restored.')) return;
 
     try {
-        const response = await fetch(`${API_URL}?action=delete`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ id: id })
+        const res    = await fetch(`${API_URL}?action=delete`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ id }),
         });
-
-        const result = await response.json();
+        const result = await res.json();
 
         if (result.success) {
             showMessage(result.message, 'success');
             loadPatients();
+            loadMedicines();
         } else {
             showMessage(result.error || 'Delete failed', 'error');
         }
-    } catch (error) {
-        console.error('Error:', error);
-        showMessage('Failed to delete patient record', 'error');
+    } catch (err) {
+        console.error('Error:', err);
+        showMessage('Failed to delete record', 'error');
     }
 }
 
-// Cancel edit
-cancelBtn.addEventListener('click', resetForm);
-
+// ─── Helpers ────────────────────────────────────────────────
 function resetForm() {
-    editIdInput.value = '';
-    document.getElementById('patient_id').value = '';
-    formTitle.textContent = 'Add New Patient Record';
-    submitBtn.textContent = 'Add Record';
-    cancelBtn.style.display = 'none';
+    document.getElementById('patientForm').reset();
+    document.getElementById('editId').value          = '';
+    document.getElementById('patient_id').value      = '';
+    document.getElementById('reason_hidden').value   = '';
+    document.getElementById('otherReasonGroup').style.display = 'none';
+    document.getElementById('reason').required       = false;
+}
+
+function escapeHtml(text) {
+    const el = document.createElement('div');
+    el.appendChild(document.createTextNode(String(text ?? '')));
+    return el.innerHTML;
+}
+
+function formatDate(str) {
+    if (!str) return 'N/A';
+    try {
+        const d = new Date(str);
+        if (isNaN(d)) return 'N/A';
+        return d.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    } catch { return 'N/A'; }
 }

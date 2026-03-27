@@ -84,10 +84,13 @@ class MedicineController {
         }
 
         try {
-            $this->medicine->medicine_name = $data['medicine_name'];
-            $this->medicine->description = $data['description'] ?? '';
-            $this->medicine->current_stock = $data['current_stock'] ?? 0;
-            
+            $this->medicine->medicine_name     = $data['medicine_name'];
+            $this->medicine->milligrams        = $data['milligrams']        ?? null;
+            $this->medicine->description       = $data['description']       ?? '';
+            $this->medicine->manufactured_date = $data['manufactured_date'] ?? null;
+            $this->medicine->expiry_date       = $data['expiry_date']       ?? null;
+            $this->medicine->current_stock     = $data['current_stock']     ?? 0;
+
             if ($this->medicine->create()) {
                 http_response_code(201);
                 echo json_encode([
@@ -125,11 +128,13 @@ class MedicineController {
         }
 
         try {
-            $this->medicine->medicine_id = $data['medicine_id'];
-            $this->medicine->medicine_name = $data['medicine_name'];
-            $this->medicine->description = $data['description'];
-            $this->medicine->current_stock = $data['current_stock'];
-            
+            $this->medicine->medicine_id       = $data['medicine_id'];
+            $this->medicine->medicine_name     = $data['medicine_name'];
+            $this->medicine->milligrams        = $data['milligrams']        ?? null;
+            $this->medicine->description       = $data['description']       ?? '';
+            $this->medicine->manufactured_date = $data['manufactured_date'] ?? null;
+            $this->medicine->expiry_date       = $data['expiry_date']       ?? null;
+
             if ($this->medicine->update()) {
                 http_response_code(200);
                 echo json_encode([

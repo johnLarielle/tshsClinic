@@ -1,6 +1,15 @@
 <?php
 
 require_once __DIR__ . '/../app/Config/Config.php';
+require_once __DIR__ . '/../app/includes/log_helper.php';
+
+// Open DB connection for logging (non-fatal if it fails)
+$_logDb = null;
+try {
+    $_logDb = (new Database())->connect();
+} catch (Exception $e) {
+    // Logging is best-effort; auth still works without it
+}
 
 // Start session
 if (session_status() === PHP_SESSION_NONE) {
@@ -33,15 +42,15 @@ if (!$data) {
 switch ($action) {
     case 'login':
         if ($method === 'POST') {
-            login($data);
+            login($data, $_logDb);
         }
         break;
         
     case 'logout':
         if ($method === 'GET') {
-            logoutRedirect();
+            logoutRedirect($_logDb);
         } else {
-            logout();
+            logout($_logDb);
         }
         break;
         
@@ -58,7 +67,7 @@ switch ($action) {
 /**
  * Login function
  */
-function login($data) {
+function login($data, $db) {
     if (empty($data['username']) || empty($data['password']) || empty($data['user_type'])) {
         http_response_code(400);
         echo json_encode([
@@ -98,6 +107,10 @@ function login($data) {
         $_SESSION['fullname'] = $valid_credentials[$user_type]['fullname'];
         $_SESSION['login_time'] = time();
 
+        if ($db) {
+            writeLog($db, 'LOGIN', 'Auth', "Admin '{$username}' logged in successfully");
+        }
+
         http_response_code(200);
         echo json_encode([
             'success' => true,
@@ -109,6 +122,14 @@ function login($data) {
             ]
         ]);
     } else {
+        if ($db) {
+            // Log failed attempt (no session yet, log directly)
+            try {
+                $logger = new ActivityLog($db);
+                $logger->log('LOGIN_FAILED', 'Auth', "Failed login attempt for username '{$username}'", $username, $username);
+            } catch (Exception $e) {}
+        }
+
         http_response_code(401);
         echo json_encode([
             'success' => false,
@@ -120,10 +141,14 @@ function login($data) {
 /**
  * Logout function (JSON response)
  */
-function logout() {
+function logout($db) {
+    $username = $_SESSION['username'] ?? 'unknown';
+    if ($db) {
+        writeLog($db, 'LOGOUT', 'Auth', "Admin '{$username}' logged out");
+    }
     session_unset();
     session_destroy();
-    
+
     http_response_code(200);
     echo json_encode([
         'success' => true,
@@ -134,7 +159,11 @@ function logout() {
 /**
  * Logout with redirect (for direct link clicks)
  */
-function logoutRedirect() {
+function logoutRedirect($db) {
+    $username = $_SESSION['username'] ?? 'unknown';
+    if ($db) {
+        writeLog($db, 'LOGOUT', 'Auth', "Admin '{$username}' logged out");
+    }
     session_unset();
     session_destroy();
     header('Location: ../public/login.php');

@@ -1,6 +1,12 @@
 <?php
 
 require_once __DIR__ . '/../app/Config/Config.php';
+require_once __DIR__ . '/../app/includes/log_helper.php';
+
+// Start session for authentication
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Set headers for JSON response
 header('Content-Type: application/json');
@@ -14,9 +20,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// Get request method and action
+// Check authentication for write operations
 $method = $_SERVER['REQUEST_METHOD'];
 $action = isset($_GET['action']) ? $_GET['action'] : '';
+
+// Only require auth for create, update, delete (allow public read)
+$protectedActions = ['create', 'update', 'delete'];
+if (in_array($action, $protectedActions)) {
+    if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
+        http_response_code(401);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Authentication required. Please login first.'
+        ]);
+        exit();
+    }
+}
 
 // Initialize database connection
 try {
@@ -179,7 +198,10 @@ function createPatientRecord($patient, $patientRecord, $medicine, $db) {
         
         // Commit transaction
         $db->commit();
-        
+
+        writeLog($db, 'ADD_RECORD', 'Patient Records',
+            "Added patient record for '{$data['name']}' (medicine: {$data['medicine']}, qty: {$data['quantity']})");
+
         http_response_code(201);
         echo json_encode([
             'success' => true,
@@ -269,7 +291,10 @@ function updatePatientRecord($patient, $patientRecord, $medicine, $db) {
         
         // Commit transaction
         $db->commit();
-        
+
+        writeLog($db, 'UPDATE_RECORD', 'Patient Records',
+            "Updated patient record ID {$data['id']} for '{$data['name']}' (medicine: {$data['medicine']}, qty: {$data['quantity']})");
+
         http_response_code(200);
         echo json_encode([
             'success' => true,
@@ -328,7 +353,10 @@ function deletePatientRecord($patientRecord, $medicine, $db) {
         
         // Commit transaction
         $db->commit();
-        
+
+        writeLog($db, 'DELETE_RECORD', 'Patient Records',
+            "Deleted patient record ID {$record_id} (medicine ID: {$record['medicine_id']}, qty restored: {$record['quantity']})");
+
         http_response_code(200);
         echo json_encode([
             'success' => true,
