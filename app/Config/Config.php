@@ -1,8 +1,9 @@
 <?php
 
-// Enable error reporting for development
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+// Error display: off in production, on in local dev
+$isLocal = in_array($_SERVER['SERVER_NAME'] ?? '', ['localhost', '127.0.0.1', '::1']);
+error_reporting($isLocal ? E_ALL : 0);
+ini_set('display_errors', $isLocal ? 1 : 0);
 
 // Set timezone
 date_default_timezone_set('Asia/Manila');

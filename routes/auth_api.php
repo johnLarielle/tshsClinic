@@ -166,7 +166,9 @@ function logoutRedirect($db) {
     }
     session_unset();
     session_destroy();
-    header('Location: ../public/login.php');
+    $scheme   = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host     = $_SERVER['HTTP_HOST'];
+    header("Location: {$scheme}://{$host}/login.php");
     exit();
 }
 

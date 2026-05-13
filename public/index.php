@@ -233,9 +233,10 @@
 
         .error-msg {
             font-size: 0.76em; color: var(--danger);
-            display: none; margin-top: 2px;
             font-weight: 500;
-            display: flex; align-items: center; gap: 4px;
+            display: none;
+            align-items: center; gap: 4px;
+            margin-top: 2px;
         }
         .error-msg.visible { display: flex; }
 
@@ -335,6 +336,100 @@
             font-size: 0.8em; color: var(--txt-3);
         }
 
+        /* ── Form tabs ───────────────────────────────── */
+        .form-tabs {
+            display: flex;
+            gap: 4px;
+            background: white;
+            border: 1.5px solid var(--border);
+            border-radius: var(--r-xl);
+            padding: 5px;
+            margin-bottom: 22px;
+            box-shadow: var(--sh-sm);
+        }
+        .form-tab {
+            flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
+            padding: 11px 16px;
+            border: none; border-radius: var(--r-lg);
+            font-size: 0.88em; font-weight: 600; font-family: inherit;
+            cursor: pointer; transition: var(--ease);
+            color: var(--txt-3); background: transparent;
+        }
+        .form-tab i { font-size: 1.1em; }
+        .form-tab.active {
+            background: var(--primary-mid);
+            color: white;
+            box-shadow: 0 4px 12px rgba(37,99,235,0.35);
+        }
+        .form-tab.active.teal-tab {
+            background: linear-gradient(135deg, #06b6d4, #0891b2);
+            box-shadow: 0 4px 12px rgba(6,182,212,0.35);
+        }
+        .form-tab:not(.active):hover { background: var(--hover-bg); color: var(--txt-1); }
+
+        /* ── Lab upload section ──────────────────────── */
+
+        /* lab upload zone */
+        .pub-drop-zone {
+            border: 2px dashed #a5f3fc;
+            border-radius: var(--r-md);
+            padding: 30px 16px; text-align: center;
+            cursor: pointer; transition: var(--ease);
+            background: #ecfeff;
+        }
+        .pub-drop-zone:hover, .pub-drop-zone.drag-over {
+            border-color: #06b6d4;
+            background: #cffafe;
+        }
+        .pub-drop-zone i   { font-size: 2.2rem; color: #06b6d4; display: block; margin-bottom: 6px; }
+        .pub-drop-zone p   { font-size: .88em; font-weight: 600; color: #0e7490; margin-bottom: 3px; }
+        .pub-drop-zone small{ color: #0891b2; font-size:.75em; }
+        /* file list for multiple uploads */
+        .pub-file-list { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+        .pub-file-row {
+            background: #ecfeff;
+            border: 1px solid #a5f3fc; border-radius: var(--r-md);
+            padding: 10px 12px;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            grid-template-rows: auto auto;
+            column-gap: 10px; row-gap: 5px;
+            align-items: center;
+        }
+        .pub-file-row .pfr-icon {
+            font-size: 1.5rem; color: #06b6d4; flex-shrink:0;
+            grid-row: 1 / 3; align-self: center;
+        }
+        .pub-file-row .pfr-name {
+            font-weight: 700; font-size:.88em; color:var(--txt-1);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .pub-file-row .pfr-rm {
+            background:none; border:none; color:var(--txt-3);
+            cursor:pointer; font-size:1.2rem; padding:0 2px;
+            grid-row: 1 / 3; align-self: center;
+            transition: color .15s;
+        }
+        .pub-file-row .pfr-rm:hover { color: var(--danger); }
+        .pub-file-row .pfr-bottom {
+            display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+        }
+        .pub-file-row .pfr-size { font-size:.75em; color:var(--txt-3); }
+        .pub-file-row .pfr-type {
+            flex: 1; min-width: 130px;
+            padding: 5px 10px;
+            border: 1px solid #a5f3fc; border-radius: 6px;
+            font-size: .8em; background: white; color: var(--txt-1);
+            font-family: inherit; cursor: pointer;
+        }
+        .pub-file-row .pfr-type:focus { outline:none; border-color:#06b6d4; }
+        .pub-file-row .pfr-type.unset { color: var(--danger); border-color: var(--danger); }
+
+        @media(max-width:600px){
+            .form-tab span { display:none; }
+            .form-tab i    { font-size:1.3em; }
+        }
+
         /* ── Responsive ─────────────────────────────── */
         @media (max-width: 600px) {
             .main-wrapper { padding: 24px 14px 48px; }
@@ -387,6 +482,19 @@
         <i class='bx bx-error-circle'></i>
         <span id="errorMsg">An error occurred. Please try again.</span>
     </div>
+
+    <!-- ── Tab Switcher ── -->
+    <div class="form-tabs">
+        <button type="button" class="form-tab active" id="tabVisit" onclick="switchTab('visit')">
+            <i class='bx bxs-user-detail'></i> Patient Visit Form
+        </button>
+        <button type="button" class="form-tab teal-tab" id="tabLab" onclick="switchTab('lab')">
+            <i class='bx bx-test-tube'></i> Upload Lab Results
+        </button>
+    </div>
+
+    <!-- ══ Panel: Visit Form ══ -->
+    <div id="panel-visit">
 
     <!-- Form Card -->
     <div class="form-card">
@@ -441,9 +549,9 @@
                         </label>
                         <div class="input-wrap">
                             <i class='bx bx-phone icon'></i>
-                            <input type="tel" id="contact_no" name="contact_no" placeholder="09XX-XXX-XXXX" required autocomplete="tel">
+                            <input type="tel" id="contact_no" name="contact_no" placeholder="09XXXXXXXXX" required autocomplete="tel" inputmode="numeric" pattern="[0-9]{11}" maxlength="11">
                         </div>
-                        <span class="error-msg" id="err-contact_no"><i class='bx bx-error-circle'></i> Contact number is required.</span>
+                        <span class="error-msg" id="err-contact_no"><i class='bx bx-error-circle'></i> Enter an 11-digit number (e.g. 09XXXXXXXXX).</span>
                     </div>
                 </div>
             </div>
@@ -532,6 +640,153 @@
         </form>
     </div><!-- /form-card -->
 
+    </div><!-- /panel-visit -->
+
+    <!-- ══ Panel: Lab Upload Form ══ -->
+    <div id="panel-lab" style="display:none;">
+
+        <!-- Success state -->
+        <div class="success-banner" id="labSuccessBanner" style="display:none;background:linear-gradient(135deg,#ecfeff,#cffafe);border-color:#67e8f9;">
+            <div class="success-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2);box-shadow:0 6px 20px rgba(6,182,212,.35);">
+                <i class='bx bx-check'></i>
+            </div>
+            <div class="success-title" style="color:#0e7490;">Lab Results Uploaded!</div>
+            <div class="success-sub" style="color:#0891b2;">Your files have been submitted to the clinic. Thank you!</div>
+            <button type="button" onclick="resetLabForm()" class="btn btn-ghost" style="margin-top:14px;">
+                <i class='bx bx-upload'></i> Upload Another
+            </button>
+        </div>
+
+        <div id="labFormCard" class="form-card">
+            <form id="labForm" novalidate>
+
+                <!-- Section: Personal Info -->
+                <div class="section-header">
+                    <div class="section-icon blue"><i class='bx bxs-user'></i></div>
+                    <div>
+                        <div class="section-label">Your Information</div>
+                        <div class="section-sublabel">Enter your personal details</div>
+                    </div>
+                </div>
+                <div class="section-divider"></div>
+
+                <div class="form-body">
+                    <div class="form-grid">
+                        <!-- Full Name -->
+                        <div class="form-group full" id="lgrp-name">
+                            <label class="form-label" for="lab_name">
+                                <i class='bx bx-user'></i> Full Name <span class="req">*</span>
+                            </label>
+                            <div class="input-wrap">
+                                <i class='bx bx-user icon'></i>
+                                <input type="text" id="lab_name" placeholder="e.g. Maria Santos" required autocomplete="name">
+                            </div>
+                            <span class="error-msg" id="lerr-name"><i class='bx bx-error-circle'></i> Full name is required.</span>
+                        </div>
+
+                        <!-- Patient Type -->
+                        <div class="form-group" id="lgrp-type">
+                            <label class="form-label" for="lab_patient_type">
+                                <i class='bx bx-id-card'></i> Patient Type <span class="req">*</span>
+                            </label>
+                            <div class="input-wrap">
+                                <i class='bx bx-id-card icon'></i>
+                                <select id="lab_patient_type" required>
+                                    <option value="" disabled selected>Select type…</option>
+                                    <option value="Student">Student</option>
+                                    <option value="Faculty">Faculty</option>
+                                    <option value="Staff">Staff</option>
+                                    <option value="Visitor">Visitor</option>
+                                </select>
+                            </div>
+                            <span class="error-msg" id="lerr-type"><i class='bx bx-error-circle'></i> Please select your type.</span>
+                        </div>
+
+                        <!-- Contact -->
+                        <div class="form-group" id="lgrp-contact">
+                            <label class="form-label" for="lab_contact">
+                                <i class='bx bx-phone'></i> Contact Number <span class="req">*</span>
+                            </label>
+                            <div class="input-wrap">
+                                <i class='bx bx-phone icon'></i>
+                                <input type="tel" id="lab_contact" placeholder="09XXXXXXXXX" required inputmode="numeric" pattern="[0-9]{11}" maxlength="11">
+                            </div>
+                            <span class="error-msg" id="lerr-contact"><i class='bx bx-error-circle'></i> Enter an 11-digit number.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section: Lab Files -->
+                <div class="section-header" style="margin-top:10px;">
+                    <div class="section-icon teal"><i class='bx bx-test-tube'></i></div>
+                    <div>
+                        <div class="section-label">Lab Files</div>
+                        <div class="section-sublabel">Select files and set the type for each one</div>
+                    </div>
+                </div>
+                <div class="section-divider"></div>
+
+                <div class="form-body">
+                    <div class="form-grid">
+                        <!-- Notes -->
+                        <div class="form-group full" id="lgrp-notes">
+                            <label class="form-label" for="lab_notes">
+                                <i class='bx bx-note'></i> Notes <small style="color:var(--txt-3);font-weight:400">(optional)</small>
+                            </label>
+                            <textarea id="lab_notes" placeholder="Any general remarks…" style="resize:none;min-height:56px;"></textarea>
+                        </div>
+
+                        <!-- Files -->
+                        <div class="form-group full" id="lgrp-files">
+                            <label class="form-label">
+                                <i class='bx bx-file'></i> Files <span class="req">*</span>
+                                <small style="color:var(--txt-3);font-weight:400"> — select one or more · JPG, PNG, PDF, WEBP · max 10 MB each</small>
+                            </label>
+
+                            <div class="pub-drop-zone" id="labDropZone">
+                                <i class='bx bx-cloud-upload'></i>
+                                <p>Click to browse or drag &amp; drop</p>
+                                <small>Select multiple files at once — set the lab type for each below</small>
+                                <input type="file" id="labFileInput"
+                                       accept=".jpg,.jpeg,.png,.gif,.webp,.pdf"
+                                       multiple style="display:none;">
+                            </div>
+
+                            <!-- Per-file rows with individual lab type selector -->
+                            <div class="pub-file-list" id="labFileList"></div>
+                            <span class="error-msg" id="lerr-files"><i class='bx bx-error-circle'></i> Please select at least one file.</span>
+                            <span class="error-msg" id="lerr-labtype"><i class='bx bx-error-circle'></i> Please set the lab type for every file.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress bar (shown while uploading) -->
+                <div id="labProgress" style="display:none;padding:0 28px 10px;">
+                    <div style="height:6px;background:var(--border);border-radius:99px;overflow:hidden;">
+                        <div id="labProgressBar" style="height:100%;background:linear-gradient(90deg,#06b6d4,#0891b2);width:0%;transition:width .3s;"></div>
+                    </div>
+                    <p style="font-size:.78em;color:#0891b2;margin-top:5px;" id="labProgressText">Uploading…</p>
+                </div>
+
+                <!-- General error -->
+                <div id="labErrGeneral" style="display:none;margin:0 28px 12px;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:var(--r-md);font-size:.85em;color:#991b1b;"></div>
+
+                <!-- Footer -->
+                <div class="form-footer">
+                    <button type="button" class="btn btn-ghost" onclick="resetLabForm()">
+                        <i class='bx bx-reset'></i> Clear
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="labSubmitBtn" style="background:linear-gradient(135deg,#06b6d4,#0891b2);box-shadow:0 4px 12px rgba(6,182,212,.3);">
+                        <span class="btn-text"><i class='bx bx-upload'></i> Submit Lab Results</span>
+                        <span class="btn-spinner"><div class="spinner"></div>&nbsp; Uploading…</span>
+                    </button>
+                </div>
+
+            </form>
+        </div><!-- /form-card -->
+
+    </div><!-- /panel-lab -->
+
 </div><!-- /main-wrapper -->
 
 <div class="page-footer">
@@ -539,5 +794,186 @@
 </div>
 
 <script src="js/app.js"></script>
+<script>
+/* ── Tab switching ─────────────────────────────────────────── */
+function switchTab(tab) {
+    const isVisit = tab === 'visit';
+    document.getElementById('panel-visit').style.display = isVisit ? '' : 'none';
+    document.getElementById('panel-lab').style.display   = isVisit ? 'none' : '';
+    document.getElementById('tabVisit').classList.toggle('active',  isVisit);
+    document.getElementById('tabLab').classList.toggle('active',   !isVisit);
+}
+
+/* ── Lab Upload Form ───────────────────────────────────────── */
+const PUB_LAB_API = '../routes/public_lab_api.php';
+
+// ── Lab contact: numbers only, max 11 ────────────────────────
+const labContactEl = document.getElementById('lab_contact');
+labContactEl.addEventListener('keypress', e => { if (!/[0-9]/.test(e.key)) e.preventDefault(); });
+labContactEl.addEventListener('input',    () => { labContactEl.value = labContactEl.value.replace(/\D/g,'').slice(0,11); });
+
+// ── File management (multiple) ────────────────────────────────
+const labDrop  = document.getElementById('labDropZone');
+const labInput = document.getElementById('labFileInput');
+let   labFiles = []; // our own file list
+
+labDrop.addEventListener('click', () => labInput.click());
+['dragenter','dragover'].forEach(ev => labDrop.addEventListener(ev, e => { e.preventDefault(); labDrop.classList.add('drag-over'); }));
+['dragleave','drop'].forEach(ev => labDrop.addEventListener(ev, () => labDrop.classList.remove('drag-over')));
+labDrop.addEventListener('drop', e => { e.preventDefault(); addFiles(e.dataTransfer.files); });
+labInput.addEventListener('change', () => { addFiles(labInput.files); labInput.value = ''; });
+
+const iconMap  = {'image/jpeg':'bx-image','image/png':'bx-image','image/gif':'bx-image','image/webp':'bx-image','application/pdf':'bxs-file-pdf'};
+const LAB_TYPES = ['X-Ray','ECG / EKG','Blood Test','Urinalysis','Stool Analysis','CBC','Other'];
+let   labFileTypes = []; // parallel array — lab type per file
+
+function addFiles(fileList) {
+    Array.from(fileList).forEach(f => {
+        if (!labFiles.find(x => x.name === f.name && x.size === f.size)) {
+            labFiles.push(f);
+            labFileTypes.push(''); // no type selected yet
+        }
+    });
+    renderFileList();
+    document.getElementById('lerr-files').style.display   = 'none';
+    document.getElementById('lerr-labtype').style.display = 'none';
+}
+function removeFile(idx) {
+    labFiles.splice(idx, 1);
+    labFileTypes.splice(idx, 1);
+    renderFileList();
+}
+function setFileType(idx, val) {
+    labFileTypes[idx] = val;
+    const sel = document.getElementById(`pfr-type-${idx}`);
+    if (sel) sel.classList.toggle('unset', !val);
+}
+function renderFileList() {
+    const list = document.getElementById('labFileList');
+    if (!labFiles.length) { list.innerHTML = ''; return; }
+
+    const typeOpts = LAB_TYPES.map(t => `<option value="${t}">${t}</option>`).join('');
+
+    list.innerHTML = labFiles.map((f, i) => `
+        <div class="pub-file-row">
+            <i class='bx ${iconMap[f.type] || 'bx-file'} pfr-icon'></i>
+            <span class="pfr-name" title="${esc(f.name)}">${esc(f.name)}</span>
+            <button type="button" class="pfr-rm" onclick="removeFile(${i})" title="Remove">
+                <i class='bx bx-x-circle'></i>
+            </button>
+            <div class="pfr-bottom">
+                <span class="pfr-size">${fmtBytes(f.size)}</span>
+                <select class="pfr-type ${labFileTypes[i] ? '' : 'unset'}"
+                        id="pfr-type-${i}"
+                        onchange="setFileType(${i}, this.value)">
+                    <option value="">— Set lab type —</option>
+                    ${typeOpts}
+                </select>
+            </div>
+        </div>`).join('');
+
+    // Restore selected values
+    labFiles.forEach((_, i) => {
+        const sel = document.getElementById(`pfr-type-${i}`);
+        if (sel && labFileTypes[i]) sel.value = labFileTypes[i];
+    });
+}
+
+function resetLabForm() {
+    document.getElementById('labForm').reset();
+    labFiles     = [];
+    labFileTypes = [];
+    renderFileList();
+    document.getElementById('labSuccessBanner').style.display = 'none';
+    document.getElementById('labFormCard').style.display      = '';
+    document.getElementById('labErrGeneral').style.display    = 'none';
+    document.getElementById('labProgress').style.display      = 'none';
+    document.querySelectorAll('[id^="lerr-"]').forEach(e => e.style.display = 'none');
+}
+
+// ── Validation helpers ────────────────────────────────────────
+function labFieldErr(id, show) {
+    document.getElementById(id).style.display = show ? 'flex' : 'none';
+}
+
+// ── Submit ────────────────────────────────────────────────────
+document.getElementById('labForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const name    = document.getElementById('lab_name').value.trim();
+    const ptype   = document.getElementById('lab_patient_type').value;
+    const contact = document.getElementById('lab_contact').value.trim();
+
+    const allTypesSet = labFiles.length > 0 && labFileTypes.every(t => t !== '');
+
+    let valid = true;
+    labFieldErr('lerr-name',    !name);    if (!name)    valid = false;
+    labFieldErr('lerr-type',    !ptype);   if (!ptype)   valid = false;
+    labFieldErr('lerr-contact', !/^[0-9]{11}$/.test(contact)); if (!/^[0-9]{11}$/.test(contact)) valid = false;
+    labFieldErr('lerr-files',   !labFiles.length);   if (!labFiles.length)  valid = false;
+    labFieldErr('lerr-labtype', !allTypesSet);        if (!allTypesSet)      valid = false;
+    if (!valid) return;
+
+    const btn = document.getElementById('labSubmitBtn');
+    btn.disabled = true;
+    btn.querySelector('.btn-text').style.display   = 'none';
+    btn.querySelector('.btn-spinner').style.display = 'inline-flex';
+
+    const errDiv  = document.getElementById('labErrGeneral');
+    const progDiv = document.getElementById('labProgress');
+    const progBar = document.getElementById('labProgressBar');
+    const progTxt = document.getElementById('labProgressText');
+
+    errDiv.style.display  = 'none';
+    progDiv.style.display = '';
+
+    let successCount = 0;
+    let lastErr = '';
+
+    const globalNotes = document.getElementById('lab_notes').value;
+
+    for (let i = 0; i < labFiles.length; i++) {
+        const f       = labFiles[i];
+        const fType   = labFileTypes[i];
+        progBar.style.width = `${Math.round((i / labFiles.length) * 100)}%`;
+        progTxt.textContent = `Uploading ${i + 1} of ${labFiles.length}: ${f.name} (${fType})`;
+
+        const fd = new FormData();
+        fd.append('fullname',     name);
+        fd.append('patient_type', ptype);
+        fd.append('contact_no',   contact);
+        fd.append('lab_type',     fType);
+        fd.append('notes',        globalNotes);
+        fd.append('lab_file',     f);
+
+        try {
+            const res  = await fetch(`${PUB_LAB_API}?action=upload`, { method: 'POST', body: fd });
+            const json = await res.json();
+            if (json.success) { successCount++; }
+            else { lastErr = json.error || 'Upload failed'; }
+        } catch (ex) {
+            lastErr = ex.message;
+        }
+    }
+
+    progBar.style.width = '100%';
+    progDiv.style.display = 'none';
+    btn.disabled = false;
+    btn.querySelector('.btn-text').style.display    = 'inline-flex';
+    btn.querySelector('.btn-spinner').style.display = 'none';
+
+    if (successCount === labFiles.length) {
+        document.getElementById('labFormCard').style.display      = 'none';
+        document.getElementById('labSuccessBanner').style.display = 'block';
+        labFiles = [];
+    } else {
+        errDiv.textContent    = lastErr || `${successCount} of ${labFiles.length} files uploaded. Please retry.`;
+        errDiv.style.display  = '';
+    }
+});
+
+function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtBytes(b) { return b < 1024 ? b+'B' : b < 1048576 ? (b/1024).toFixed(1)+'KB' : (b/1048576).toFixed(1)+'MB'; }
+</script>
 </body>
 </html>

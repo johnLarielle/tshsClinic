@@ -18,6 +18,20 @@ document.addEventListener('DOMContentLoaded', () => {
     loadMedicines();
     loadSymptoms();
     setupValidation();
+
+    // Contact number — numbers only, max 11 digits
+    const contactInput = document.getElementById('contact_no');
+    contactInput.addEventListener('keypress', e => {
+        if (!/[0-9]/.test(e.key)) e.preventDefault();
+    });
+    contactInput.addEventListener('input', () => {
+        contactInput.value = contactInput.value.replace(/\D/g, '').slice(0, 11);
+    });
+    contactInput.addEventListener('paste', e => {
+        e.preventDefault();
+        const pasted = (e.clipboardData || window.clipboardData).getData('text');
+        contactInput.value = pasted.replace(/\D/g, '').slice(0, 11);
+    });
 });
 
 /* ═══════════════════════════════════════════════
@@ -35,13 +49,16 @@ async function loadMedicines() {
                 const opt    = document.createElement('option');
                 opt.value    = med.medicine_name;
                 opt.dataset.stock = stock;
+
+                const mgLabel = med.milligrams ? ` ${med.milligrams}mg` : '';
+
                 if (stock === 0) {
-                    opt.textContent = `${med.medicine_name} (Out of stock)`;
+                    opt.textContent = `${med.medicine_name}${mgLabel} — Out of stock`;
                     opt.disabled = true;
                 } else if (stock < 10) {
-                    opt.textContent = `${med.medicine_name} (Low: ${stock} left)`;
+                    opt.textContent = `${med.medicine_name}${mgLabel} (Low: ${stock} left)`;
                 } else {
-                    opt.textContent = med.medicine_name;
+                    opt.textContent = `${med.medicine_name}${mgLabel}`;
                 }
                 medicineSelect.appendChild(opt);
             });
@@ -220,7 +237,7 @@ function validateField(id) {
     const rules = {
         name:         { msg: 'Full name is required.', test: () => val.length > 0 },
         patient_type: { msg: 'Please select your type.', test: () => val !== '' },
-        contact_no:   { msg: 'Contact number is required.', test: () => val.length > 0 },
+        contact_no:   { msg: 'Enter an 11-digit number (e.g. 09XXXXXXXXX).', test: () => /^[0-9]{11}$/.test(val) },
         medicine:     { msg: 'Please select a medicine.', test: () => val !== '' },
         quantity:     { msg: 'Enter a valid quantity (min 1).', test: () => parseInt(val) >= 1 },
     };

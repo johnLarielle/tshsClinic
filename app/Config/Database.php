@@ -9,33 +9,46 @@ class Database {
     private $conn;
 
     public function __construct() {
-        // Load environment variables
-        $this->loadEnv();
-        
-        $this->host = getenv('DB_HOST') ?: 'localhost';
-        $this->db_name = getenv('DB_NAME') ?: 'record_management';
-        $this->username = getenv('DB_USER') ?: 'root';
-        $this->password = getenv('DB_PASS') ?: '';
-        $this->charset = getenv('DB_CHARSET') ?: 'utf8mb4';
+        $env = $this->loadEnv();
+
+        $this->host     = $env['DB_HOST']    ?? 'localhost';
+        $this->db_name  = $env['DB_NAME']    ?? 'record_management';
+        $this->username = $env['DB_USER']    ?? 'root';
+        $this->password = $env['DB_PASS']    ?? '';
+        $this->charset  = $env['DB_CHARSET'] ?? 'utf8mb4';
     }
 
-    private function loadEnv() {
+    /**
+     * Parse .env file into an associative array.
+     * Does NOT use putenv/getenv — safe on shared hosts where putenv is disabled.
+     */
+    private function loadEnv(): array {
         $envFile = __DIR__ . '/../../.env';
-        if (file_exists($envFile)) {
-            $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-            foreach ($lines as $line) {
-                if (strpos(trim($line), '#') === 0) continue;
-                list($key, $value) = explode('=', $line, 2);
-                putenv(trim($key) . '=' . trim($value));
-            }
+        $vars    = [];
+
+        if (!file_exists($envFile)) {
+            return $vars;
         }
+
+        $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            $line = trim($line);
+            // Skip comments and blank lines
+            if ($line === '' || $line[0] === '#') continue;
+            // Split on the first '=' only
+            $parts = explode('=', $line, 2);
+            if (count($parts) !== 2) continue;
+            $vars[trim($parts[0])] = trim($parts[1]);
+        }
+
+        return $vars;
     }
 
     public function connect() {
         $this->conn = null;
 
         try {
-            $dsn = "mysql:host=" . $this->host . ";dbname=" . $this->db_name . ";charset=" . $this->charset;
+            $dsn = "mysql:host={$this->host};dbname={$this->db_name};charset={$this->charset}";
             $this->conn = new PDO($dsn, $this->username, $this->password);
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);

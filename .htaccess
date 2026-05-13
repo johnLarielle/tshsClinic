@@ -1,19 +1,29 @@
 RewriteEngine On
 
-# Allow API requests to pass through
-RewriteRule ^api/(.*)$ routes/api.php?action=$1 [QSA,L]
+# ── Block direct access to sensitive files ──────────────────
+<FilesMatch "^\.env$|\.env\..*$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
 
-# Redirect all requests to public folder if not a file or directory
+# ── Block InfinityFree default placeholder files ─────────────
+RewriteRule ^index2\.html$ public/index.php [L,R=301]
+RewriteRule ^index\.html$  public/index.php [L,R=301]
+
+# ── Root request → public form ───────────────────────────────
+RewriteRule ^$ public/index.php [L]
+
+# ── Block access to app/ and database/ (never web-accessible) ─
+# routes/ must stay open — it handles all AJAX API calls
+RewriteRule ^(app|database)(/|$) - [F,L]
+
+# ── Serve public/ as the web root ────────────────────────────
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ public/$1 [L]
 
-# Set default page
-DirectoryIndex public/index.php
+# ── Default index ─────────────────────────────────────────────
+DirectoryIndex index.php public/index.php
 
-# Disable directory listing
+# ── Disable directory listing ─────────────────────────────────
 Options -Indexes
-
-# Enable error reporting (disable in production)
-php_flag display_errors On
-php_value error_reporting E_ALL

@@ -20,6 +20,9 @@ require_once __DIR__ . '/../../app/includes/admin_header.php';
         <button class="btn btn-secondary btn-sm" onclick="loadAll()" style="margin-left:6px;">
             <i class='bx bx-refresh'></i> Refresh
         </button>
+        <button class="btn btn-primary btn-sm" onclick="openPrintModal()" style="margin-left:6px;">
+            <i class='bx bx-printer'></i> Print
+        </button>
     </div>
 </div>
 
@@ -118,6 +121,73 @@ require_once __DIR__ . '/../../app/includes/admin_header.php';
         </table>
     </div>
 </div>
+
+<!-- ── Print Options Modal ── -->
+<div class="modal-overlay" id="printModal" onclick="if(event.target===this)closePrintModal()">
+    <div class="modal-box" style="max-width:420px;">
+        <div class="modal-header">
+            <span class="modal-title"><i class='bx bx-printer' style="margin-right:6px;"></i>Print Analytics Report</span>
+            <button class="modal-close" onclick="closePrintModal()"><i class='bx bx-x'></i></button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:0.85em;color:var(--txt-2);margin-bottom:16px;">
+                Choose a date range for the report. The <strong>Records by Day</strong> table and period-based data will reflect this range.
+            </p>
+
+            <!-- Presets -->
+            <div class="form-group" style="margin-bottom:14px;">
+                <label class="form-label">Quick Select</label>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="print-preset active" onclick="selectPreset(this,7)">Last 7 Days</button>
+                    <button class="print-preset"        onclick="selectPreset(this,30)">Last 30 Days</button>
+                    <button class="print-preset"        onclick="selectPreset(this,90)">Last 90 Days</button>
+                    <button class="print-preset"        onclick="selectPreset(this,365)">Last Year</button>
+                    <button class="print-preset"        onclick="selectPreset(this,0)">Custom Range</button>
+                </div>
+            </div>
+
+            <!-- Custom date range (hidden by default) -->
+            <div id="customRangeGroup" style="display:none;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px;">
+                    <div class="form-group">
+                        <label class="form-label">From Date</label>
+                        <input type="date" id="printDateFrom" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">To Date</label>
+                        <input type="date" id="printDateTo" class="form-control">
+                    </div>
+                </div>
+                <p id="dateRangeError" style="font-size:0.78em;color:#dc2626;margin-top:4px;display:none;">
+                    "From" date must be before "To" date.
+                </p>
+            </div>
+
+            <div class="form-actions" style="margin-top:20px;">
+                <button type="button" class="btn btn-secondary" onclick="closePrintModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" id="generateReportBtn" onclick="confirmPrint()">
+                    <i class='bx bx-printer'></i> Generate Report
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.print-preset {
+    padding: 6px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    background: #fff;
+    font-size: 0.8em;
+    font-weight: 600;
+    color: var(--txt-2);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.print-preset:hover { border-color: var(--primary); color: var(--primary); }
+.print-preset.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+</style>
 
 <script>
 const ANALYTICS_API   = '../../routes/analytics_api.php';
@@ -250,6 +320,265 @@ async function loadRecentRecords() {
 function esc(t){const el=document.createElement('div');el.appendChild(document.createTextNode(String(t??'')));return el.innerHTML;}
 function fmtDate(s){if(!s)return 'N/A';try{return new Date(s).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}catch{return 'N/A';}}
 function fmtShort(s){if(!s)return'';const d=new Date(s+'T00:00:00');return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
+
+// ─── Print Modal helpers ─────────────────────────────────────
+let printDays   = 7;   // preset mode
+let printCustom = false;
+
+function openPrintModal() {
+    // Pre-fill custom date inputs with sensible defaults
+    const today = new Date();
+    const prior = new Date(); prior.setDate(today.getDate() - 30);
+    document.getElementById('printDateTo').value   = today.toISOString().split('T')[0];
+    document.getElementById('printDateFrom').value = prior.toISOString().split('T')[0];
+
+    // Match the active dashboard period preset button
+    const presetMap = { 7: 0, 30: 1, 90: 2 };
+    const idx = presetMap[currentDays] ?? 0;
+    selectPreset(document.querySelectorAll('.print-preset')[idx], currentDays);
+    document.getElementById('printModal').classList.add('open');
+}
+function closePrintModal() {
+    document.getElementById('printModal').classList.remove('open');
+}
+function selectPreset(el, days) {
+    document.querySelectorAll('.print-preset').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    printDays   = days;
+    printCustom = (days === 0);
+    document.getElementById('customRangeGroup').style.display = printCustom ? '' : 'none';
+    document.getElementById('dateRangeError').style.display  = 'none';
+}
+function confirmPrint() {
+    if (printCustom) {
+        const from = document.getElementById('printDateFrom').value;
+        const to   = document.getElementById('printDateTo').value;
+        const err  = document.getElementById('dateRangeError');
+        if (!from || !to) { err.textContent = 'Please fill in both From and To dates.'; err.style.display = ''; return; }
+        if (from > to)    { err.textContent = '"From" date must be before "To" date.';  err.style.display = ''; return; }
+        err.style.display = 'none';
+        closePrintModal();
+        printAnalytics({ mode: 'custom', from, to });
+    } else {
+        closePrintModal();
+        printAnalytics({ mode: 'days', days: printDays });
+    }
+}
+
+// ─── Print Analytics (summary report — no charts) ───────────
+async function printAnalytics(opts = { mode: 'days', days: 7 }) {
+    const btn = document.getElementById('generateReportBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class=\'bx bx-loader-alt bx-spin\'></i> Preparing…'; }
+
+    // Determine API days param and label
+    let apiDays, periodLabel;
+    if (opts.mode === 'custom') {
+        // Calculate days between dates for the line chart endpoint
+        const ms  = new Date(opts.to) - new Date(opts.from);
+        apiDays   = Math.max(1, Math.ceil(ms / 86400000) + 1);
+        periodLabel = `${fmtDate(opts.from + 'T00:00:00')} — ${fmtDate(opts.to + 'T00:00:00')}`;
+    } else {
+        apiDays     = opts.days;
+        periodLabel = `Last ${opts.days} day${opts.days !== 1 ? 's' : ''}`;
+    }
+
+    try {
+        // Fetch all data in parallel
+        const [overview, patientTypes, topMeds, stockLevels, topSymptoms, recentRecs, lineData] = await Promise.all([
+            fetch(`${ANALYTICS_API}?action=overview`).then(r => r.json()),
+            fetch(`${ANALYTICS_API}?action=patient_types`).then(r => r.json()),
+            fetch(`${ANALYTICS_API}?action=top_medicines&limit=10`).then(r => r.json()),
+            fetch(`${ANALYTICS_API}?action=stock_levels`).then(r => r.json()),
+            fetch(`${ANALYTICS_API}?action=top_symptoms&limit=12`).then(r => r.json()),
+            fetch(`${ANALYTICS_API}?action=recent_records&limit=20`).then(r => r.json()),
+            fetch(`${ANALYTICS_API}?action=records_by_day&days=${apiDays}`).then(r => r.json()),
+        ]);
+
+        const now = new Date().toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
+
+        // ── KPI summary ──
+        const ov = overview.success ? overview : {};
+        const kpiHtml = `
+            <table>
+                <thead><tr><th>Metric</th><th>Value</th><th>Note</th></tr></thead>
+                <tbody>
+                    <tr><td>Total Patient Records</td><td class="num">${Number(ov.total_records||0).toLocaleString()}</td><td>${ov.records_today||0} added today</td></tr>
+                    <tr><td>Unique Patients</td><td class="num">${Number(ov.total_patients||0).toLocaleString()}</td><td>Ever registered</td></tr>
+                    <tr><td>Medicines in Formulary</td><td class="num">${Number(ov.total_medicines||0).toLocaleString()}</td><td>Active medicines</td></tr>
+                    <tr><td>Total Units Dispensed</td><td class="num">${Number(ov.total_dispensed||0).toLocaleString()}</td><td>All time</td></tr>
+                    <tr><td>Records This Month</td><td class="num">${Number(ov.records_month||0).toLocaleString()}</td><td>Current month</td></tr>
+                    <tr><td>Records Today</td><td class="num">${Number(ov.records_today||0).toLocaleString()}</td><td>${new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</td></tr>
+                    <tr><td>Low / Out of Stock</td><td class="num warn">${Number(ov.low_stock_count||0).toLocaleString()}</td><td>Medicines needing restock</td></tr>
+                </tbody>
+            </table>`;
+
+        // ── Patient breakdown ──
+        const ptRows = patientTypes.success && patientTypes.data.length
+            ? patientTypes.data.map((r,i) => `<tr><td>${i+1}</td><td>${esc(r.patient_type||'Unknown')}</td><td class="num">${Number(r.total).toLocaleString()}</td></tr>`).join('')
+            : '<tr><td colspan="3" class="empty">No data</td></tr>';
+        const ptHtml = `<table><thead><tr><th>#</th><th>Patient Type</th><th>Count</th></tr></thead><tbody>${ptRows}</tbody></table>`;
+
+        // ── Records by day ──
+        const lineRows = lineData.success && lineData.data.length
+            ? lineData.data.map(r => `<tr><td>${esc(fmtDate(r.day))}</td><td class="num">${r.total_records}</td><td class="num">${r.total_qty}</td></tr>`).join('')
+            : '<tr><td colspan="3" class="empty">No data</td></tr>';
+        const lineHtml = `<table><thead><tr><th>Date</th><th>Records</th><th>Units Dispensed</th></tr></thead><tbody>${lineRows}</tbody></table>`;
+
+        // ── Top medicines ──
+        const medRows = topMeds.success && topMeds.data.length
+            ? topMeds.data.map((r,i) => `<tr><td>${i+1}</td><td>${esc(r.medicine_name)}</td><td class="num">${Number(r.total_qty).toLocaleString()}</td><td class="num">${Number(r.times_dispensed).toLocaleString()}</td></tr>`).join('')
+            : '<tr><td colspan="4" class="empty">No data</td></tr>';
+        const medHtml = `<table><thead><tr><th>#</th><th>Medicine</th><th>Units Dispensed</th><th>Times Given</th></tr></thead><tbody>${medRows}</tbody></table>`;
+
+        // ── Stock levels ──
+        const stockRows = stockLevels.success && stockLevels.data.length
+            ? stockLevels.data.map((r,i) => {
+                const s = parseInt(r.current_stock);
+                const status = s === 0 ? 'Out of Stock' : s < 10 ? 'Low' : s < 50 ? 'Medium' : 'Good';
+                const cls    = s === 0 ? 'stock-out' : s < 10 ? 'stock-low' : s < 50 ? 'stock-mid' : 'stock-ok';
+                return `<tr><td>${i+1}</td><td>${esc(r.medicine_name)}</td><td class="num">${s.toLocaleString()}</td><td class="${cls}">${status}</td></tr>`;
+              }).join('')
+            : '<tr><td colspan="4" class="empty">No data</td></tr>';
+        const stockHtml = `<table><thead><tr><th>#</th><th>Medicine</th><th>Current Stock</th><th>Status</th></tr></thead><tbody>${stockRows}</tbody></table>`;
+
+        // ── Top symptoms ──
+        const symRows = topSymptoms.success && topSymptoms.data.length
+            ? topSymptoms.data.map((r,i) => `<tr><td>${i+1}</td><td>${esc(r.symptom)}</td><td class="num">${Number(r.total_cases).toLocaleString()}</td></tr>`).join('')
+            : '<tr><td colspan="3" class="empty">No data</td></tr>';
+        const symHtml = `<table><thead><tr><th>#</th><th>Symptom / Reason</th><th>Cases</th></tr></thead><tbody>${symRows}</tbody></table>`;
+
+        // ── Recent records ──
+        const recRows = recentRecs.success && recentRecs.data.length
+            ? recentRecs.data.map((r,i) => `<tr>
+                <td>${i+1}</td>
+                <td>${esc(r.patient_name||'N/A')}</td>
+                <td>${esc(r.patient_type||'N/A')}</td>
+                <td>${esc(r.medicine_name||'N/A')}</td>
+                <td class="num">${r.quantity??0}</td>
+                <td>${esc(fmtDate(r.date_given))}</td>
+                <td>${esc(r.reason||'N/A')}</td>
+              </tr>`).join('')
+            : '<tr><td colspan="7" class="empty">No records.</td></tr>';
+        const recHtml = `<table><thead><tr><th>#</th><th>Patient</th><th>Type</th><th>Medicine</th><th>Qty</th><th>Date</th><th>Reason</th></tr></thead><tbody>${recRows}</tbody></table>`;
+
+        // ── Build print window ──
+        const win = window.open('', '_blank', 'width=1000,height=850');
+        win.document.write(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>TSHS Clinic — Analytics Report</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #fff; color: #111827; font-size: 12px; padding: 28px 32px; }
+
+    .rpt-header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #2563eb; padding-bottom: 14px; margin-bottom: 24px; }
+    .rpt-brand  { font-size: 1.5em; font-weight: 900; color: #2563eb; letter-spacing: -0.5px; }
+    .rpt-brand span { color: #111827; }
+    .rpt-clinic { font-size: 0.8em; color: #6b7280; margin-top: 2px; }
+    .rpt-meta   { text-align: right; font-size: 0.8em; color: #6b7280; line-height: 1.7; }
+    .rpt-meta strong { display: block; font-size: 1.15em; color: #111827; font-weight: 800; }
+
+    .section { margin-bottom: 22px; page-break-inside: avoid; }
+    .section-hd { font-size: 0.68em; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; color: #2563eb; background: #eff6ff; border-left: 3px solid #2563eb; padding: 5px 10px; margin-bottom: 8px; border-radius: 0 4px 4px 0; }
+
+    .two-col { display: flex; gap: 20px; }
+    .two-col .section { flex: 1; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.95em; }
+    thead tr { background: #f9fafb; }
+    th { padding: 7px 10px; text-align: left; font-size: 0.72em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280; border-bottom: 1.5px solid #e5e7eb; white-space: nowrap; }
+    td { padding: 7px 10px; border-bottom: 1px solid #f3f4f6; color: #374151; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:nth-child(even) { background: #fafafa; }
+
+    td.num   { font-weight: 700; color: #111827; text-align: right; }
+    td.warn  { font-weight: 700; color: #dc2626; text-align: right; }
+    td.empty { text-align: center; color: #9ca3af; padding: 14px; font-style: italic; }
+
+    td.stock-out { font-weight: 700; color: #dc2626; }
+    td.stock-low { font-weight: 700; color: #d97706; }
+    td.stock-mid { font-weight: 600; color: #2563eb; }
+    td.stock-ok  { font-weight: 600; color: #16a34a; }
+
+    .rpt-footer { margin-top: 28px; border-top: 1px solid #e5e7eb; padding-top: 10px; font-size: 0.72em; color: #9ca3af; text-align: center; }
+
+    @media print {
+        body { padding: 10px 14px; font-size: 11px; }
+        .section { page-break-inside: avoid; }
+        .two-col { display: flex; }
+    }
+</style>
+</head>
+<body>
+
+<div class="rpt-header">
+    <div>
+        <div class="rpt-brand">TSHS <span>Clinic</span></div>
+        <div class="rpt-clinic">Health Information System &mdash; Analytics Report</div>
+    </div>
+    <div class="rpt-meta">
+        <strong>Analytics Summary</strong>
+        Generated: ${esc(now)}<br>
+        Period filter: ${esc(periodLabel)}
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-hd">Overview — Key Numbers</div>
+    ${kpiHtml}
+</div>
+
+<div class="two-col">
+    <div class="section">
+        <div class="section-hd">Patient Breakdown by Type</div>
+        ${ptHtml}
+    </div>
+    <div class="section">
+        <div class="section-hd">Top Reported Symptoms</div>
+        ${symHtml}
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-hd">Records by Day (${esc(periodLabel)})</div>
+    ${lineHtml}
+</div>
+
+<div class="two-col">
+    <div class="section">
+        <div class="section-hd">Top Dispensed Medicines</div>
+        ${medHtml}
+    </div>
+    <div class="section">
+        <div class="section-hd">Current Stock Levels</div>
+        ${stockHtml}
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-hd">Recent Patient Records (last 20)</div>
+    ${recHtml}
+</div>
+
+<div class="rpt-footer">
+    TSHS Clinic &mdash; Health Information System &nbsp;|&nbsp; Printed on ${esc(now)}
+</div>
+
+<script>
+    window.onload = function() { window.print(); };
+<\/script>
+</body>
+</html>`);
+        win.document.close();
+
+    } catch (err) {
+        console.error('Print error:', err);
+        alert('Failed to prepare print report. Please try again.');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class=\'bx bx-printer\'></i> Generate Report'; }
+    }
+}
 
 document.getElementById('lineSubtitle').textContent=`Records & units per day (last ${currentDays} days)`;
 loadAll();

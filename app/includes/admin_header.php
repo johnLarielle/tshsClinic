@@ -5,6 +5,7 @@ $nav = [
     ['page' => 'records',   'href' => 'records.php',   'icon' => 'bxs-user-detail',  'label' => 'Patient Records', 'section' => 'Main'],
     ['page' => 'medicine',  'href' => 'medicine.php',  'icon' => 'bx-capsule',       'label' => 'Medicine',        'section' => 'Main'],
     ['page' => 'symptoms',  'href' => 'symptoms.php',  'icon' => 'bx-heart',         'label' => 'Symptoms',        'section' => 'Main'],
+    ['page' => 'lab',       'href' => 'lab.php',       'icon' => 'bx-test-tube',     'label' => 'Lab Results',     'section' => 'Main'],
     ['page' => 'analytics', 'href' => 'analytics.php', 'icon' => 'bx-bar-chart-alt-2','label' => 'Analytics',      'section' => 'Reports'],
     ['page' => 'logs',      'href' => 'logs.php',      'icon' => 'bx-list-ul',       'label' => 'Activity Logs',   'section' => 'Reports'],
 ];

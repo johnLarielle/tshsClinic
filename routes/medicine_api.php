@@ -127,9 +127,9 @@ switch ($action) {
 
     case 'update_stock':
         if ($method === 'POST') {
-            $medId  = $data['medicine_id'] ?? '?';
-            $type   = $data['type']        ?? 'adjust';
-            $qty    = $data['quantity']    ?? 0;
+        $medId  = $data['medicine_id'] ?? '?';
+        $type   = $data['action']      ?? 'adjust';
+        $qty    = $data['quantity']    ?? 0;
             runAndLog(
                 fn() => $medicineController->updateStock($data),
                 $db,

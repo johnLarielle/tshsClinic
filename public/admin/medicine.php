@@ -40,7 +40,7 @@ require_once __DIR__ . '/../../app/includes/admin_header.php';
                 </tr>
             </thead>
         <tbody id="medicineTableBody">
-            <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--txt-3);">Loading medicines…</td></tr>
+            <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--txt-3);">Loading medicines…</td></tr>
         </tbody>
     </table>
 </div>

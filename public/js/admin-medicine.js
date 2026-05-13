@@ -65,7 +65,7 @@ function handleStockOverlayClick(e) {
 // ─── Load medicines ──────────────────────────────────────────
 async function loadMedicines() {
     const tbody = document.getElementById('medicineTableBody');
-    tbody.innerHTML = '<tr><td colspan="6" class="loading">Loading medicines…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="loading">Loading medicines…</td></tr>';
 
     try {
         const res    = await fetch(`${API_URL}?action=read`);
@@ -75,13 +75,13 @@ async function loadMedicines() {
         if (result.success && result.data && result.data.length > 0) {
             displayMedicines(result.data);
         } else if (result.success) {
-            tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No medicines found. Click "Add Medicine" to get started.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No medicines found. Click "Add Medicine" to get started.</td></tr>';
         } else {
             showMessage(result.error || 'Failed to load medicines', 'error');
         }
     } catch (err) {
         console.error('Error loading medicines:', err);
-        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Error loading medicines. Check console for details.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Error loading medicines. Check console for details.</td></tr>';
     }
 }
 
@@ -226,7 +226,7 @@ document.getElementById('stockForm').addEventListener('submit', async e => {
 
     const data = {
         medicine_id: document.getElementById('stock_medicine_id').value,
-        type:        document.getElementById('stock_action').value,
+        action:      document.getElementById('stock_action').value,
         quantity:    document.getElementById('stock_quantity').value,
     };
 
